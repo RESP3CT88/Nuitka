@@ -45,7 +45,8 @@ def parseArgs():
     )
 
     Tracing.is_quiet = options.quiet or int(os.environ.get("NUITKA_QUIET", "0"))
-    Tracing.use_progressbar = options.progressbar
+    if options.progressbar:
+        Tracing.enableProgressBar()
 
     if options.verbose_output:
         Tracing.optimization_logger.setFileHandle(
@@ -859,3 +860,8 @@ def shallCompileWithoutBuildDirectory():
 def shallPreferSourcecodeOverExtensionModules():
     """*bool* prefer source code over extension modules if both are there"""
     return options is not None and options.prefer_source_code
+
+
+def shallUseProgressBar():
+    """*bool* prefer source code over extension modules if both are there"""
+    return options.progressbar

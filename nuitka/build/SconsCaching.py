@@ -119,7 +119,7 @@ def _injectCcache(the_compiler, cc_path, env, python_prefix, assume_yes_for_down
         assert getExecutablePath(os.path.basename(the_compiler), env=env) == cc_path
 
         # We use absolute paths for CC, pass it like this, as ccache does not like absolute.
-        env["CXX"] = env["CC"] = "%s %s" % (ccache_binary, cc_path)
+        env["CXX"] = env["CC"] = '%s "%s"' % (ccache_binary, cc_path)
 
         # Spare ccache the detection of the compiler, seems it will also misbehave when it's
         # prefixed with "ccache" on old gcc versions in terms of detecting need for C++ linkage.
@@ -131,18 +131,11 @@ def _injectCcache(the_compiler, cc_path, env, python_prefix, assume_yes_for_down
         scons_details_logger.info(
             "Providing real CC path '%s' via PATH extension." % cc_path
         )
-
-        # Do not consider scons cache anymore.
-        result = True
     else:
         if isWin32Windows():
             scons_logger.warning(
                 "Didn't find ccache for C level caching, follow Nuitka user manual description."
             )
-
-        result = False
-
-    return result
 
 
 def enableCcache(
@@ -220,9 +213,6 @@ def enableClcache(the_compiler, env, source_dir):
     scons_details_logger.info(
         "Using inline copy of clcache with %r cl binary." % cl_binary
     )
-
-    # Do not consider scons cache anymore.
-    return True
 
 
 def _getCcacheStatistics(ccache_logfile):

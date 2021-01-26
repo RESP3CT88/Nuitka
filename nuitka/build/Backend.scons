@@ -47,9 +47,6 @@ import subprocess
 import SCons  # pylint: disable=import-error
 from SCons.Script import (  # pylint: disable=import-error
     ARGUMENTS,
-    CacheDir,
-    Decider,
-    Default,
     Environment,
     File,
     GetOption,
@@ -69,6 +66,7 @@ from .SconsHacks import (
     makeGccUseLinkerFile,
     myDetectVersion,
 )
+from .SconsProgress import enableSconsProgressBar, setSconsProgressBarTotal
 from .SconsSpawn import getWindowsSpawnFunction, getWrappedSpawnFunction
 from .SconsUtils import (
     addClangClPathFromMSVC,
@@ -118,9 +116,6 @@ module_suffix = getArgumentDefaulted("module_suffix", None)
 
 # Full names shall be used, no remapping for cacheable filenames.
 full_names = getArgumentBool("full_names", False)
-
-# The directory to use for cache directory.
-cache_mode = getArgumentBool("cache_mode", False)
 
 # Module mode: Create a Python extension module, create an executable otherwise.
 module_mode = getArgumentBool("module_mode", False)
@@ -260,6 +255,9 @@ compiler_version_mode = getArgumentBool("compiler_version", False)
 
 assume_yes_for_downloads = getArgumentBool("assume_yes_for_downloads", False)
 
+if getArgumentBool("progressbar", True):
+    enableSconsProgressBar()
+
 
 def printCompilerVersionOutput(*args):
     if compiler_version_mode or show_scons_mode:
@@ -373,6 +371,16 @@ gcc_mode = isGccName(the_cc_name) or clang_mode
 # Only use MSVC if not already clear, we are using MinGW.
 msvc_mode = win_target and not gcc_mode
 mingw_mode = win_target and gcc_mode
+
+scons_details_logger.info(
+    "Modes for this compiler are: %r"
+    % {
+        "gcc_mode": gcc_mode,
+        "clang_mode": clang_mode,
+        "clangcl_mode": clangcl_mode,
+        "mingw_mode": mingw_mode,
+    }
+)
 
 if gcc_mode and not clang_mode:
     gcc_version = myDetectVersion(env, the_compiler)
@@ -1263,36 +1271,20 @@ changeKeyboardInteruptToErrorExit()
 
 # Check if ccache is installed, and complain if it is not.
 if gcc_mode:
-    if enableCcache(
+    enableCcache(
         the_compiler=the_compiler,
         env=env,
         source_dir=source_dir,
         python_prefix=python_prefix,
         assume_yes_for_downloads=assume_yes_for_downloads,
-    ):
-        cache_mode = False
+    )
 
 if msvc_mode:
-    if enableClcache(
+    enableClcache(
         the_compiler=the_compiler,
         env=env,
         source_dir=source_dir,
-    ):
-        cache_mode = False
-
-# Caching bv scons if necessary, i.e. no ccache available, when done, by the fastest
-# possible algorithm and right inside the build directory. Makes no sense of course,
-# if that is removed later on by Nuitka, so in that case, this is passed as false,
-# to begin with.
-if cache_mode:
-    if show_scons_mode:
-        my_print("Scons: Using scons cache inside build directory.")
-
-    CacheDir(
-        os.path.join(source_dir, "cache-" + target_arch + "-" + python_abi_version)
     )
-    Decider("MD5-timestamp")
-
 
 writeSconsReport(
     source_dir=source_dir,
@@ -1303,4 +1295,6 @@ writeSconsReport(
     clangcl_mode=clangcl_mode,
 )
 
-Default(target)
+setSconsProgressBarTotal(len(source_files))
+
+env.Default(target)

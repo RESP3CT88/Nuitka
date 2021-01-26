@@ -38,9 +38,6 @@ from nuitka.utils.ThreadedExecutor import RLock
 # Written by Options module.
 is_quiet = False
 
-# Written by Options module
-use_progressbar = False
-
 
 def printIndented(level, *what):
     print("    " * level, *what)
@@ -254,9 +251,20 @@ try:
     from tqdm import tqdm
 except ImportError:
     tqdm = None
+else:
+    tqdm.set_lock(RLock())
+
+# Written by enableProgressBar from nuitka.options or scons files.
+use_progressbar = False
 
 
-def reportProgressBar(stage, unit, item, total):
+def enableProgressBar():
+    global use_progressbar  # singleton, pylint: disable=global-statement
+
+    use_progressbar = True
+
+
+def reportProgressBar(stage, unit, item, total=None, update=True):
     global progress  # singleton, pylint: disable=global-statement
 
     # Tolerate the absence for now.
@@ -267,17 +275,24 @@ def reportProgressBar(stage, unit, item, total):
         try:
             # Setting disable=None enables tty detection.
             progress = tqdm(
-                initial=1, total=total, unit=unit, disable=None, leave=False
+                initial=0,
+                total=total,
+                unit=unit,
+                disable=None,
+                leave=False,
             )
         except ImportError:
             return
 
     if progress is not None:
-        progress.set_description(stage)
-        progress.set_postfix(item=item)
+        if stage is not None:
+            progress.set_description(stage)
+        if item is not None:
+            progress.set_postfix(item=item)
         progress.unit = unit
         progress.total = total
-        progress.update(1)
+        if update:
+            progress.update(1)
 
 
 def closeProgressBar():
