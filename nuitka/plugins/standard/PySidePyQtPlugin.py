@@ -38,6 +38,8 @@ from nuitka.utils.FileOperations import (
 from nuitka.utils.SharedLibraries import locateDLL
 from nuitka.utils.Utils import isWin32Windows
 
+from nuitka.finalizations.FinalizeMarkups import getImportedNames
+
 
 class NuitkaPluginPyQtPySidePlugins(NuitkaPluginBase):
     """This is for plugins of PyQt4/PyQt5 and PySide once it is supported.
@@ -110,16 +112,16 @@ if not path.startswith(__nuitka_binary_dir):
 from __future__ import print_function
 from __future__ import absolute_import
 
-import PyQt%(qt_version)d.QtCore
-for v in PyQt%(qt_version)d.QtCore.QCoreApplication.libraryPaths():
+import %(qt_version)s.QtCore
+for v in %(qt_version)s.QtCore.QCoreApplication.libraryPaths():
     print(v)
 import os
 # Standard CPython has installations like this.
-guess_path = os.path.join(os.path.dirname(PyQt%(qt_version)d.__file__), "plugins")
+guess_path = os.path.join(os.path.dirname(%(qt_version)s.__file__), "plugins")
 if os.path.exists(guess_path):
     print("GUESS:", guess_path)
 # Anaconda has this, but it seems not automatic.
-guess_path = os.path.join(os.path.dirname(PyQt%(qt_version)d.__file__), "..", "..", "..", "Library", "plugins")
+guess_path = os.path.join(os.path.dirname(%(qt_version)s.__file__), "..", "..", "..", "Library", "plugins")
 if os.path.exists(guess_path):
     print("GUESS:", guess_path)
 """ % {
@@ -178,17 +180,17 @@ if os.path.exists(guess_path):
         full_name = module.getFullName()
         plugin_dirs = None
 
-        if full_name.getTopLevelPackageName() in ("PyQt4", "PyQt5"):
-            qt_version = int(full_name.getTopLevelPackageName()[-1])
-            plugin_dirs = self.getPyQtPluginDirs(qt_version)
+        if full_name.getTopLevelPackageName() in ("PyQt4", "PyQt5", "PySide2"):
+            # qt_version = int(full_name.getTopLevelPackageName()[-1])
+            plugin_dirs = self.getPyQtPluginDirs(full_name.getTopLevelPackageName())
 
-        if full_name in ("PyQt4", "PyQt5"):
+        if full_name in ("PyQt4", "PyQt5", "PySide2"):
             if not plugin_dirs:
                 self.sysexit(
                     "Error, failed to detect %s plugin directories." % full_name
                 )
 
-            target_plugin_dir = os.path.join(dist_dir, full_name, "qt-plugins")
+            target_plugin_dir = os.path.join(dist_dir, str(full_name), "qt-plugins")
 
             plugin_options = set(self.qt_plugins.split(","))
 
@@ -288,6 +290,18 @@ if os.path.exists(guess_path):
                 else:
                     self.sysexit("Error, no such Qt plugin family: qml")
 
+                #for filename in getSubDirectories(qml_plugin_dir):
+                #    print(filename)
+                #getFileList()
+                #print(basename)
+                # print(sys.executable)
+                # print(sys.argv)
+                # print(Options.getPositionalArgs()[0])
+                # print(os.path.dirname(os.path.abspath(__file__)))
+                print(os.path.abspath(Options.getPositionalArgs()[0]))
+                print(getImportedNames())
+
+
                 qml_target_dir = os.path.normpath(
                     os.path.join(target_plugin_dir, "..", "Qt", "qml")
                 )
@@ -316,6 +330,7 @@ if os.path.exists(guess_path):
                             ".png",
                             ".ttf",
                             ".metainfo",
+                            ".mesh",
                         )
                     )
                     if not os.path.isdir(filename)
@@ -434,7 +449,7 @@ if os.path.exists(guess_path):
 
         full_name = module.getFullName()
 
-        if full_name in ("PyQt4.QtCore", "PyQt5.QtCore"):
+        if full_name in ("PyQt4.QtCore", "PyQt5.QtCore", "PySide2.QtCore"):
             code = """\
 from __future__ import absolute_import
 
