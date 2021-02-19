@@ -298,9 +298,8 @@ if os.path.exists(guess_path):
                 # print(sys.argv)
                 # print(Options.getPositionalArgs()[0])
                 # print(os.path.dirname(os.path.abspath(__file__)))
-                print(os.path.abspath(Options.getPositionalArgs()[0]))
-                print(getImportedNames())
-
+                # print(os.path.abspath(Options.getPositionalArgs()[0]))
+                # print(getImportedNames())
 
                 qml_target_dir = os.path.normpath(
                     os.path.join(target_plugin_dir, "..", "Qt", "qml")
