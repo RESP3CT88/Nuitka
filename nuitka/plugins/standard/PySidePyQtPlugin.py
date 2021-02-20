@@ -34,6 +34,7 @@ from nuitka.utils.FileOperations import (
     getSubDirectories,
     makePath,
     removeDirectory,
+    listDir,
 )
 from nuitka.utils.SharedLibraries import locateDLL
 from nuitka.utils.Utils import isWin32Windows
@@ -51,7 +52,8 @@ class NuitkaPluginPyQtPySidePlugins(NuitkaPluginBase):
     plugin_name = "qt-plugins"
     plugin_desc = "Required by the PyQt and PySide packages"
 
-    def __init__(self, qt_plugins):
+    def __init__(self, qt_plugins, qml_modules):
+        self.qml_modules = qml_modules
         self.qt_plugins = qt_plugins
 
         self.qt_dirs = {}
@@ -67,6 +69,17 @@ class NuitkaPluginPyQtPySidePlugins(NuitkaPluginBase):
             "--include-qt-plugins",
             action="store",
             dest="qt_plugins",
+            default="sensible",
+            help="""\
+Which Qt plugins to include. These can be big with dependencies, so
+by default only the sensible ones are included, but you can also put
+"all" or list them individually. If you specify something that does
+not exist, a list of all available will be given.""",
+        )
+        group.add_option(
+            "--include-qml-modules",
+            action="store",
+            dest="qml_modules",
             default="sensible",
             help="""\
 Which Qt plugins to include. These can be big with dependencies, so
@@ -227,6 +240,8 @@ if os.path.exists(guess_path):
             for plugin_dir in plugin_dirs:
                 copyTree(plugin_dir, target_plugin_dir)
 
+            print(plugin_options)
+
             if "all" not in plugin_options:
                 for plugin_candidate in getSubDirectories(target_plugin_dir):
                     if os.path.basename(plugin_candidate) not in plugin_options:
@@ -300,6 +315,8 @@ if os.path.exists(guess_path):
                 # print(os.path.dirname(os.path.abspath(__file__)))
                 # print(os.path.abspath(Options.getPositionalArgs()[0]))
                 # print(getImportedNames())
+                
+
 
                 qml_target_dir = os.path.normpath(
                     os.path.join(target_plugin_dir, "..", "Qt", "qml")
@@ -308,6 +325,13 @@ if os.path.exists(guess_path):
                 self.info("Copying Qt plug-ins 'xml' to '%s'." % (qml_target_dir))
 
                 copyTree(qml_plugin_dir, qml_target_dir)
+
+                qml_modules = set(self.qml_modules.split(","))
+
+                for module_path, module_name in listDir(qml_target_dir):
+                    if os.path.isdir(module_path):
+                        if os.path.basename(module_path) not in qml_modules:
+                            removeDirectory(module_path, ignore_errors=False)
 
                 # We try to filter here, not for DLLs.
                 result += [
@@ -334,6 +358,11 @@ if os.path.exists(guess_path):
                     )
                     if not os.path.isdir(filename)
                     if not os.path.basename(filename) == "qmldir"
+                    if os.path.exists(
+                        os.path.join(
+                            qml_target_dir, os.path.relpath(filename, qml_plugin_dir)
+                        )
+                    )
                 ]
 
                 # Also copy required OpenGL DLLs on Windows
